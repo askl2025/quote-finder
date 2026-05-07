@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kivy
+*.apk
+*.aab
+
+# Data (large files)
+server/data/*.faiss
+server/data/*.db
+server/models/
+
+# Cache
+.cache/
+*.cache
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local

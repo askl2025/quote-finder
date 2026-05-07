@@ -1,0 +1,14 @@
+name: Keep Space Alive
+
+on:
+  schedule:
+    - cron: '*/4 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Space Health
+        run: |
+          curl -s https://your-username-quote-finder.hf.space/health || true
