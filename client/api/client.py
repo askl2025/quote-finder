@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 class APIClient:
     def __init__(self, base_url: str = None):
-        self.base_url = base_url or "https://your-username-quote-finder.hf.space"
+        self.base_url = base_url or "https://askllin-quote-finder.hf.space"
         self.session = requests.Session()
         self.timeout = 15
     
