@@ -1,56 +1,35 @@
-import sqlite3
 import json
 import faiss
 import numpy as np
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 from .embedding import EmbeddingEngine
 
 class PoetryMatcher:
     def __init__(self, 
-                 db_path: str = "data/quotes.db",
+                 data_path: str = "data/quotes.json",
                  index_path: str = "data/index.faiss",
                  model_name: str = "BAAI/bge-small-zh-v1.5"):
         
-        self.db_path = Path(db_path)
+        self.data_path = Path(data_path)
         self.index_path = Path(index_path)
         
         self.embedding_engine = EmbeddingEngine(model_name)
         
-        self.quotes = self._load_quotes_from_db()
-        print(f"Loaded {len(self.quotes)} quotes from database")
+        self.quotes = self._load_quotes_from_json()
+        print(f"Loaded {len(self.quotes)} quotes from JSON")
         
         self.index = self._load_or_create_index()
     
-    def _load_quotes_from_db(self) -> List[Dict]:
-        if not self.db_path.exists():
-            print(f"Database not found: {self.db_path}")
+    def _load_quotes_from_json(self) -> List[Dict]:
+        if not self.data_path.exists():
+            print(f"Data file not found: {self.data_path}")
             return []
         
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        with open(self.data_path, 'r', encoding='utf-8') as f:
+            quotes = json.load(f)
         
-        cursor.execute("""
-            SELECT id, text, author, source, dynasty, type, tags, emotion 
-            FROM quotes
-        """)
-        rows = cursor.fetchall()
-        
-        quotes = []
-        for row in rows:
-            quotes.append({
-                "id": row[0],
-                "text": row[1],
-                "author": row[2],
-                "source": row[3],
-                "dynasty": row[4],
-                "type": row[5],
-                "tags": json.loads(row[6]) if row[6] else [],
-                "emotion": json.loads(row[7]) if row[7] else []
-            })
-        
-        conn.close()
         return quotes
     
     def _load_or_create_index(self) -> faiss.Index:
@@ -58,8 +37,9 @@ class PoetryMatcher:
             print(f"Loading existing index from {self.index_path}")
             return faiss.read_index(str(self.index_path))
         else:
-            print("No existing index found, will need to build")
-            return None
+            print("No existing index found, building now...")
+            self.build_index()
+            return self.index
     
     def build_index(self):
         if len(self.quotes) == 0:
