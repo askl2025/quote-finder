@@ -37,6 +37,8 @@ class QuoteResponse(BaseModel):
     dynasty: Optional[str] = None
     type: Optional[str] = None
     score: float
+    semantic_score: Optional[float] = None
+    keyword_score: Optional[float] = None
 
 class MatchResponse(BaseModel):
     query: str
