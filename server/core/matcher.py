@@ -3,8 +3,7 @@ import re
 import faiss
 import numpy as np
 from pathlib import Path
-from typing import List, Dict, Set, Tuple
-from collections import Counter
+from typing import List, Dict, Set
 
 from .embedding import EmbeddingEngine
 
@@ -12,9 +11,9 @@ class PoetryMatcher:
     def __init__(self, 
                  data_path: str = "data/quotes.json",
                  index_path: str = "data/index.faiss",
-                 model_name: str = "BAAI/bge-small-zh-v1.5",
-                 semantic_weight: float = 0.7,
-                 keyword_weight: float = 0.3):
+                 model_name: str = "shibing624/text2vec-base-chinese",
+                 semantic_weight: float = 0.85,
+                 keyword_weight: float = 0.15):
         
         self.data_path = Path(data_path)
         self.index_path = Path(index_path)
@@ -25,10 +24,6 @@ class PoetryMatcher:
         
         self.quotes = self._load_quotes_from_json()
         print(f"Loaded {len(self.quotes)} quotes from JSON")
-        
-        # 构建关键词索引（使用2-gram）
-        self.keyword_index = self._build_keyword_index()
-        print(f"Built keyword index with {len(self.keyword_index)} unique keywords")
         
         self.index = self._load_or_create_index()
     
@@ -44,36 +39,17 @@ class PoetryMatcher:
     
     def _extract_keywords(self, text: str) -> Set[str]:
         """从文本中提取关键词（单字+2-gram）"""
-        # 提取中文字符
         chars = re.findall(r'[\u4e00-\u9fff]', text)
         
         keywords = set()
-        
-        # 添加单字
         for char in chars:
             keywords.add(char)
         
-        # 添加2-gram
         for i in range(len(chars) - 1):
             bigram = chars[i] + chars[i+1]
             keywords.add(bigram)
         
         return keywords
-    
-    def _build_keyword_index(self) -> Dict[str, List[int]]:
-        """构建关键词索引"""
-        index = {}
-        
-        for i, quote in enumerate(self.quotes):
-            text = quote.get('text', '')
-            keywords = self._extract_keywords(text)
-            
-            for kw in keywords:
-                if kw not in index:
-                    index[kw] = []
-                index[kw].append(i)
-        
-        return index
     
     def _calculate_keyword_score(self, query: str, quote_text: str) -> float:
         """计算关键词匹配分数"""
@@ -83,18 +59,15 @@ class PoetryMatcher:
         if not query_keywords:
             return 0.0
         
-        # 计算交集比例（使用查询关键词的覆盖率）
         intersection = query_keywords & quote_keywords
         
-        # 对2-gram给予更高权重
         score = 0.0
         for kw in intersection:
-            if len(kw) >= 2:  # 2-gram
+            if len(kw) >= 2:
                 score += 2.0
-            else:  # 单字
+            else:
                 score += 1.0
         
-        # 归一化到0-1
         max_score = sum(2.0 if len(kw) >= 2 else 1.0 for kw in query_keywords)
         normalized_score = score / max_score if max_score > 0 else 0.0
         
@@ -116,7 +89,7 @@ class PoetryMatcher:
         
         print(f"Building index for {len(self.quotes)} quotes...")
         
-        batch_size = 64
+        batch_size = 32
         all_embeddings = []
         
         for i in range(0, len(self.quotes), batch_size):
@@ -143,35 +116,38 @@ class PoetryMatcher:
         if self.index is None or self.index.ntotal == 0:
             return []
         
-        # 语义搜索 - 获取更多候选结果
-        semantic_top_k = min(top_k * 5, 100)  # 获取5倍候选
+        semantic_top_k = min(top_k * 5, 100)
         query_embedding = self.embedding_engine.encode_single(query)
         query_array = np.array([query_embedding], dtype=np.float32)
         
         semantic_scores, indices = self.index.search(query_array, semantic_top_k)
         
-        # 计算混合分数
         results = []
         for sem_score, idx in zip(semantic_scores[0], indices[0]):
             if idx >= 0 and idx < len(self.quotes):
                 quote = self.quotes[idx].copy()
                 
-                # 语义分数（归一化到0-1）
                 semantic_score = float(sem_score)
-                
-                # 关键词分数
                 keyword_score = self._calculate_keyword_score(query, quote['text'])
                 
-                # 混合分数
                 final_score = (self.semantic_weight * semantic_score + 
                              self.keyword_weight * keyword_score)
                 
-                quote['score'] = final_score
-                quote['semantic_score'] = semantic_score
-                quote['keyword_score'] = keyword_score
-                results.append(quote)
+                # 构建返回数据，确保所有字段都存在
+                result = {
+                    'id': quote.get('id', f'generated_{idx}'),
+                    'text': quote.get('text', ''),
+                    'author': quote.get('author'),
+                    'source': quote.get('source'),
+                    'dynasty': quote.get('dynasty'),
+                    'type': quote.get('type'),
+                    'score': final_score,
+                    'semantic_score': semantic_score,
+                    'keyword_score': keyword_score
+                }
+                
+                results.append(result)
         
-        # 按混合分数排序
         results.sort(key=lambda x: x['score'], reverse=True)
         
         return results[:top_k]

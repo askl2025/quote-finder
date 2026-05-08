@@ -83,9 +83,17 @@ async def match_quotes(request: MatchRequest):
     
     try:
         results = matcher.match(request.query, request.top_k)
+        
+        # 确保每个结果都有id字段
+        formatted_results = []
+        for i, r in enumerate(results):
+            if 'id' not in r:
+                r['id'] = f'generated_{i}'
+            formatted_results.append(QuoteResponse(**r))
+        
         return MatchResponse(
             query=request.query,
-            results=[QuoteResponse(**r) for r in results]
+            results=formatted_results
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
