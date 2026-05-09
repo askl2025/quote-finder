@@ -11,7 +11,7 @@ class PoetryMatcher:
     def __init__(self, 
                  data_path: str = "data/quotes.json",
                  index_path: str = "data/index.faiss",
-                 model_name: str = "shibing624/text2vec-base-chinese",
+                 model_name: str = "moka-ai/m3e-base",
                  semantic_weight: float = 0.85,
                  keyword_weight: float = 0.15):
         
