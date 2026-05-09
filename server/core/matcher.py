@@ -11,19 +11,26 @@ class PoetryMatcher:
     def __init__(self, 
                  data_path: str = "data/quotes.json",
                  index_path: str = "data/index.faiss",
+                 synonym_path: str = "data/synonym_dict.json",
                  model_name: str = "moka-ai/m3e-base",
-                 semantic_weight: float = 0.85,
-                 keyword_weight: float = 0.15):
+                 semantic_weight: float = 0.7,
+                 keyword_weight: float = 0.15,
+                 synonym_weight: float = 0.15):
         
         self.data_path = Path(data_path)
         self.index_path = Path(index_path)
+        self.synonym_path = Path(synonym_path)
         self.semantic_weight = semantic_weight
         self.keyword_weight = keyword_weight
+        self.synonym_weight = synonym_weight
         
         self.embedding_engine = EmbeddingEngine(model_name)
         
         self.quotes = self._load_quotes_from_json()
         print(f"Loaded {len(self.quotes)} quotes from JSON")
+        
+        self.synonym_dict = self._load_synonym_dict()
+        print(f"Loaded synonym dict with {len(self.synonym_dict)} entries")
         
         self.index = self._load_or_create_index()
     
@@ -36,6 +43,47 @@ class PoetryMatcher:
             quotes = json.load(f)
         
         return quotes
+    
+    def _load_synonym_dict(self) -> Dict[str, List[str]]:
+        """加载同义词词典"""
+        if not self.synonym_path.exists():
+            print(f"Synonym dict not found: {self.synonym_path}")
+            return {}
+        
+        with open(self.synonym_path, 'r', encoding='utf-8') as f:
+            raw_dict = json.load(f)
+        
+        # 将分类词典转换为扁平化的映射
+        synonym_map = {}
+        for category, mappings in raw_dict.items():
+            for word, synonyms in mappings.items():
+                synonym_map[word] = synonyms
+        
+        return synonym_map
+    
+    def _expand_query(self, query: str) -> List[str]:
+        """扩展查询词"""
+        expanded = [query]  # 原始查询
+        
+        # 提取中文词
+        words = re.findall(r'[\u4e00-\u9fff]+', query)
+        
+        for word in words:
+            # 检查是否有同义词映射
+            if word in self.synonym_dict:
+                synonyms = self.synonym_dict[word]
+                expanded.extend(synonyms)
+            
+            # 检查2-gram
+            if len(word) >= 2:
+                for i in range(len(word) - 1):
+                    bigram = word[i:i+2]
+                    if bigram in self.synonym_dict:
+                        synonyms = self.synonym_dict[bigram]
+                        expanded.extend(synonyms)
+        
+        # 去重
+        return list(set(expanded))
     
     def _extract_keywords(self, text: str) -> Set[str]:
         """从文本中提取关键词（单字+2-gram）"""
@@ -72,6 +120,27 @@ class PoetryMatcher:
         normalized_score = score / max_score if max_score > 0 else 0.0
         
         return min(1.0, normalized_score)
+    
+    def _calculate_synonym_score(self, expanded_queries: List[str], quote_text: str) -> float:
+        """计算同义词匹配分数"""
+        if len(expanded_queries) <= 1:
+            return 0.0
+        
+        quote_keywords = self._extract_keywords(quote_text)
+        
+        # 计算扩展词在名句中的命中率
+        hit_count = 0
+        for eq in expanded_queries[1:]:  # 跳过原始查询
+            eq_keywords = self._extract_keywords(eq)
+            if eq_keywords & quote_keywords:
+                hit_count += 1
+        
+        # 归一化
+        max_hits = len(expanded_queries) - 1
+        if max_hits == 0:
+            return 0.0
+        
+        return min(1.0, hit_count / max_hits)
     
     def _load_or_create_index(self) -> faiss.Index:
         if self.index_path.exists():
@@ -116,6 +185,10 @@ class PoetryMatcher:
         if self.index is None or self.index.ntotal == 0:
             return []
         
+        # 扩展查询
+        expanded_queries = self._expand_query(query)
+        
+        # 语义搜索
         semantic_top_k = min(top_k * 5, 100)
         query_embedding = self.embedding_engine.encode_single(query)
         query_array = np.array([query_embedding], dtype=np.float32)
@@ -129,9 +202,12 @@ class PoetryMatcher:
                 
                 semantic_score = float(sem_score)
                 keyword_score = self._calculate_keyword_score(query, quote['text'])
+                synonym_score = self._calculate_synonym_score(expanded_queries, quote['text'])
                 
+                # 综合分数
                 final_score = (self.semantic_weight * semantic_score + 
-                             self.keyword_weight * keyword_score)
+                             self.keyword_weight * keyword_score +
+                             self.synonym_weight * synonym_score)
                 
                 # 构建返回数据，确保所有字段都存在
                 result = {
@@ -143,7 +219,8 @@ class PoetryMatcher:
                     'type': quote.get('type'),
                     'score': final_score,
                     'semantic_score': semantic_score,
-                    'keyword_score': keyword_score
+                    'keyword_score': keyword_score,
+                    'synonym_score': synonym_score
                 }
                 
                 results.append(result)

@@ -39,6 +39,7 @@ class QuoteResponse(BaseModel):
     score: float
     semantic_score: Optional[float] = None
     keyword_score: Optional[float] = None
+    synonym_score: Optional[float] = None
 
 class MatchResponse(BaseModel):
     query: str
@@ -103,7 +104,7 @@ async def health_check():
     return {
         "status": "healthy",
         "quotes_count": matcher.get_quotes_count() if matcher else 0,
-        "model": "BAAI/bge-small-zh-v1.5"
+        "model": "moka-ai/m3e-base"
     }
 
 if __name__ == "__main__":
