@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>名句匹配 - 找到最契合的名句</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --accent: #e74c3c;
+            --bg: #faf8f5;
+            --card-bg: #ffffff;
+            --text: #2c3e50;
+            --text-light: #7f8c8d;
+            --border: #ecf0f1;
+            --shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            padding: 60px 0 40px;
+        }
+
+        .logo {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 12px;
+            letter-spacing: 8px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: var(--text-light);
+            font-weight: 300;
+            letter-spacing: 4px;
+        }
+
+        /* Search Section */
+        .search-section {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 16px 24px;
+            font-size: 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s;
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(44,62,80,0.1);
+        }
+
+        .search-input::placeholder {
+            color: #bdc3c7;
+        }
+
+        .search-btn {
+            padding: 16px 32px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        .search-btn:hover {
+            background: #34495e;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(44,62,80,0.3);
+        }
+
+        .search-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Quick Tags */
+        .quick-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .tag {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--text-light);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tag:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Results */
+        .results-section {
+            margin-bottom: 40px;
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 28px 32px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card::before {
+            content: '"';
+            position: absolute;
+            top: -10px;
+            left: 16px;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 120px;
+            color: var(--primary);
+            opacity: 0.05;
+            line-height: 1;
+        }
+
+        .result-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .result-text {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 20px;
+            line-height: 1.8;
+            color: var(--primary);
+            margin-bottom: 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .result-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: var(--text-light);
+        }
+
+        .result-author {
+            font-weight: 500;
+        }
+
+        .result-score {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--text-light);
+            font-size: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .logo {
+                font-size: 36px;
+                letter-spacing: 4px;
+            }
+
+            .search-section {
+                padding: 20px;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .search-btn {
+                width: 100%;
+            }
+
+            .result-card {
+                padding: 20px;
+            }
+
+            .result-text {
+                font-size: 18px;
+            }
+        }
+
+        /* Animation */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-card:nth-child(1) { animation-delay: 0.1s; }
+        .result-card:nth-child(2) { animation-delay: 0.2s; }
+        .result-card:nth-child(3) { animation-delay: 0.3s; }
+        .result-card:nth-child(4) { animation-delay: 0.4s; }
+        .result-card:nth-child(5) { animation-delay: 0.5s; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="logo">名句匹配</h1>
+            <p class="subtitle">输入句子或关键词，找到最契合的名句</p>
+        </header>
+
+        <section class="search-section">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    id="searchInput"
+                    placeholder="例如：思念家乡、坚持梦想、花 雨天..."
+                    autocomplete="off"
+                >
+                <button class="search-btn" id="searchBtn">搜索</button>
+            </div>
+            <div class="quick-tags">
+                <span class="tag" data-query="思念家乡">思念家乡</span>
+                <span class="tag" data-query="坚持梦想">坚持梦想</span>
+                <span class="tag" data-query="孤独寂寞">孤独寂寞</span>
+                <span class="tag" data-query="爱情">爱情</span>
+                <span class="tag" data-query="人生短暂">人生短暂</span>
+                <span class="tag" data-query="离别">离别</span>
+                <span class="tag" data-query="春天美景">春天美景</span>
+                <span class="tag" data-query="学习进步">学习进步</span>
+            </div>
+        </section>
+
+        <section class="results-section" id="resultsSection">
+            <div class="empty-state">
+                <div class="empty-state-icon">📖</div>
+                <p class="empty-state-text">
+                    输入你想表达的意思<br>
+                    或者点击上方的快捷标签<br>
+                    找到最契合的名句
+                </p>
+            </div>
+        </section>
+
+        <footer>
+            <p>
+                名句匹配 Quote Finder · 
+                <a href="https://github.com/askl2025/quote-finder" target="_blank">GitHub</a>
+            </p>
+            <p style="margin-top: 8px; font-size: 12px;">
+                数据来源：唐诗宋词、人民日报、一言、Wikiquote
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        const API_URL = 'https://asklLin-quote-finder.hf.space';
+        
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const tags = document.querySelectorAll('.tag');
+
+        // Search function
+        async function search(query) {
+            if (!query.trim()) return;
+
+            // Show loading
+            resultsSection.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>正在搜索...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`${API_URL}/match`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: 8
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data.results, query);
+
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">😔</div>
+                        <p class="empty-state-text">
+                            搜索失败，请稍后重试<br>
+                            <small>${error.message}</small>
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // Display results
+        function displayResults(results, query) {
+            if (!results || results.length === 0) {
+                resultsSection.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <p class="empty-state-text">
+                            没有找到匹配的名句<br>
+                            试试其他关键词？
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = results.map((result, index) => {
+                const text = result.text || '';
+                const author = result.author || '佚名';
+                const source = result.source || '';
+                const score = Math.round((result.score || 0) * 100);
+
+                let sourceHtml = '';
+                if (source) {
+                    sourceHtml = `《${source}》`;
+                }
+
+                return `
+                    <div class="result-card fade-in" style="animation-delay: ${index * 0.1}s">
+                        <div class="result-text">${text}</div>
+                        <div class="result-meta">
+                            <span class="result-author">——${author}${sourceHtml}</span>
+                            <span class="result-score">匹配度 ${score}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            resultsSection.innerHTML = html;
+        }
+
+        // Event listeners
+        searchBtn.addEventListener('click', () => {
+            search(searchInput.value);
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                search(searchInput.value);
+            }
+        });
+
+        tags.forEach(tag => {
+            tag.addEventListener('click', () => {
+                const query = tag.dataset.query;
+                searchInput.value = query;
+                search(query);
+            });
+        });
+
+        // Focus input on load
+        searchInput.focus();
+    </script>
+</body>
+</html>
