@@ -43,3 +43,7 @@ server/models/
 
 # HF Space submodule
 hf-space/
+
+# Node modules
+node_modules/
+apk/node_modules/
