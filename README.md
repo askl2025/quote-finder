@@ -6,10 +6,11 @@
 
 ## 功能特点
 
-- **语义匹配**: 基于深度学习模型（BGE-small-zh），理解句子含义而非简单关键词匹配
-- **海量名句**: 包含唐诗宋词、成语俗语、经典名句等10万+条数据
+- **语义匹配**: 基于深度学习模型（m3e-base），理解句子含义而非简单关键词匹配
+- **同义词匹配**: 支持现代语句到古诗词意境的映射
+- **海量名句**: 包含唐诗宋词、元曲、诗经、人民日报金句等13,500+条数据
 - **多种输入**: 支持完整句子、关键词、情感描述等多种输入方式
-- **跨平台**: 支持Windows桌面端和Android移动端
+- **跨平台**: 支持Windows桌面端和网页端
 
 ## 使用示例
 
@@ -24,13 +25,17 @@
 
 ### 在线体验
 
-访问 [名句匹配在线版](https://your-username-quote-finder.hf.space) 体验。
+访问 [名句匹配在线版](https://askl2025.github.io/quote-finder/) 体验。
+
+### 下载 EXE
+
+从 [Releases](https://github.com/askl2025/quote-finder/releases) 下载 Windows 版本。
 
 ### 本地运行
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-username/quote-finder.git
+git clone https://github.com/askl2025/quote-finder.git
 cd quote-finder
 
 # 安装客户端依赖
@@ -38,33 +43,31 @@ cd client
 pip install -r requirements.txt
 
 # 运行客户端
-python main.py
+python main_tkinter.py
 ```
 
 ## 项目结构
 
 ```
 quote-finder/
-├── client/                          # Kivy客户端
-│   ├── main.py                      # 应用入口
+├── client/                          # tkinter客户端
+│   ├── main_tkinter.py              # 应用入口
 │   ├── api/client.py                # API调用封装
-│   ├── buildozer.spec               # Android打包配置
 │   └── requirements.txt
 │
-├── server/                          # 后端服务
+├── server/                          # 后端服务（HF Spaces）
 │   ├── app.py                       # FastAPI应用
 │   ├── core/
-│   │   ├── matcher.py               # 匹配逻辑
+│   │   ├── matcher.py               # 匹配逻辑（语义+关键词+同义词）
 │   │   └── embedding.py             # 模型封装
-│   ├── scripts/
-│   │   ├── collect_data.py          # 数据收集
-│   │   └── build_index.py           # 构建索引
-│   ├── Dockerfile
+│   ├── data/
+│   │   ├── quotes.json              # 名句数据库（13,500+条）
+│   │   ├── synonym_dict.json        # 同义词词典
+│   │   └── phrase_dict.json         # 短语词典
 │   └── requirements.txt
 │
-├── tests/                           # 测试文件
-│   ├── test_cases.json
-│   └── test_api.py
+├── docs/                            # GitHub Pages
+│   └── index.html                   # 网页版前端
 │
 ├── .github/workflows/               # GitHub Actions
 │   ├── release.yml                  # 自动打包发布
@@ -78,71 +81,22 @@ quote-finder/
 
 | 组件 | 技术 |
 |------|------|
-| 客户端 | Kivy (Python) |
+| 客户端 | tkinter (Python) |
+| 网页前端 | HTML/CSS/JavaScript |
 | 后端 | FastAPI |
-| 嵌入模型 | BAAI/bge-small-zh-v1.5 |
+| 嵌入模型 | moka-ai/m3e-base |
 | 向量检索 | FAISS |
-| 数据库 | SQLite |
 | 部署 | HuggingFace Spaces |
 
-## 开发指南
+## 数据来源
 
-### 1. 收集数据
-
-```bash
-cd server
-pip install -r requirements.txt
-
-# 收集名句数据
-python scripts/collect_data.py
-
-# 构建FAISS索引
-python scripts/build_index.py
-```
-
-### 2. 启动后端服务
-
-```bash
-cd server
-uvicorn app:app --reload --port 7860
-```
-
-### 3. 运行测试
-
-```bash
-python tests/test_api.py http://localhost:7860
-```
-
-### 4. 打包Android APK
-
-```bash
-cd client
-buildozer android debug
-```
-
-### 5. 打包Windows EXE
-
-```bash
-cd client
-pip install pyinstaller
-pyinstaller --onefile --windowed --name quote-finder main.py
-```
-
-## 部署指南
-
-### HuggingFace Spaces 部署
-
-1. 注册 [HuggingFace](https://huggingface.co) 账号
-2. 创建新的 Space，选择 Docker SDK
-3. 将 `server/` 目录内容推送到 Space
-4. 等待构建完成
-
-### 防止休眠
-
-Space 在不活跃时会休眠。使用以下方式保持活跃：
-
-- **UptimeRobot**: 注册 [UptimeRobot](https://uptimerobot.com)，添加监控 `https://your-space.hf.space/health`
-- **GitHub Actions**: 项目已配置 `keep-alive.yml`，每4分钟自动ping
+| 来源 | 条数 | 说明 |
+|------|------|------|
+| chinese-poetry | ~6,000 | 唐诗宋词元曲诗经 |
+| hitokoto | ~4,600 | 一言社区（文学/诗词/哲学/动画/影视）|
+| Wikiquote | ~1,900 | 名人名言 |
+| 人民日报 | ~750 | 日报金句 |
+| 米人语录 | ~300 | 经典/爱情/伤感语录 |
 
 ## 隐私说明
 
@@ -152,14 +106,9 @@ Space 在不活跃时会休眠。使用以下方式保持活跃：
 
 MIT License - 详见 [LICENSE](LICENSE)
 
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
 ## 致谢
 
-- [BAAI/bge-small-zh-v1.5](https://huggingface.co/BAAI/bge-small-zh-v1.5) - 嵌入模型
+- [moka-ai/m3e-base](https://huggingface.co/moka-ai/m3e-base) - 嵌入模型
 - [chinese-poetry](https://github.com/chinese-poetry/chinese-poetry) - 古诗词数据
-- [chinese-xinhua](https://github.com/pwxcoo/chinese-xinhua) - 成语数据
+- [hitokoto-osc/sentences-bundle](https://github.com/hitokoto-osc/sentences-bundle) - 一言数据
 - [FAISS](https://github.com/facebookresearch/faiss) - 向量检索
-- [Kivy](https://kivy.org) - 跨平台UI框架
