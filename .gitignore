@@ -40,3 +40,6 @@ server/models/
 # Environment
 .env
 .env.local
+
+# HF Space submodule
+hf-space/
