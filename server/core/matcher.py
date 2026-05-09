@@ -13,9 +13,9 @@ class PoetryMatcher:
                  index_path: str = "data/index.faiss",
                  synonym_path: str = "data/synonym_dict.json",
                  model_name: str = "moka-ai/m3e-base",
-                 semantic_weight: float = 0.7,
-                 keyword_weight: float = 0.15,
-                 synonym_weight: float = 0.15):
+                 semantic_weight: float = 0.5,
+                 keyword_weight: float = 0.25,
+                 synonym_weight: float = 0.25):
         
         self.data_path = Path(data_path)
         self.index_path = Path(index_path)
