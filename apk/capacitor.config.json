@@ -1,0 +1,8 @@
+{
+  "appId": "com.quotefinder.app",
+  "appName": "名句匹配",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
