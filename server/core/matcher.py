@@ -12,6 +12,7 @@ class PoetryMatcher:
                  data_path: str = "data/quotes.json",
                  index_path: str = "data/index.faiss",
                  synonym_path: str = "data/synonym_dict.json",
+                 phrase_path: str = "data/phrase_dict.json",
                  model_name: str = "moka-ai/m3e-base",
                  semantic_weight: float = 0.5,
                  keyword_weight: float = 0.25,
@@ -20,6 +21,7 @@ class PoetryMatcher:
         self.data_path = Path(data_path)
         self.index_path = Path(index_path)
         self.synonym_path = Path(synonym_path)
+        self.phrase_path = Path(phrase_path)
         self.semantic_weight = semantic_weight
         self.keyword_weight = keyword_weight
         self.synonym_weight = synonym_weight
@@ -31,6 +33,9 @@ class PoetryMatcher:
         
         self.synonym_dict = self._load_synonym_dict()
         print(f"Loaded synonym dict with {len(self.synonym_dict)} entries")
+        
+        self.phrase_dict = self._load_phrase_dict()
+        print(f"Loaded phrase dict with {len(self.phrase_dict)} entries")
         
         self.index = self._load_or_create_index()
     
@@ -61,11 +66,35 @@ class PoetryMatcher:
         
         return synonym_map
     
+    def _load_phrase_dict(self) -> Dict[str, List[str]]:
+        """加载短语词典"""
+        if not self.phrase_path.exists():
+            print(f"Phrase dict not found: {self.phrase_path}")
+            return {}
+        
+        with open(self.phrase_path, 'r', encoding='utf-8') as f:
+            raw_dict = json.load(f)
+        
+        # 将分类词典转换为扁平化的映射
+        phrase_map = {}
+        for category, mappings in raw_dict.items():
+            for phrase, synonyms in mappings.items():
+                phrase_map[phrase] = synonyms
+        
+        return phrase_map
+    
     def _expand_query(self, query: str) -> List[str]:
         """扩展查询词"""
         expanded = [query]  # 原始查询
         
-        # 提取中文词
+        # 1. 优先检查短语匹配（从长到短）
+        sorted_phrases = sorted(self.phrase_dict.keys(), key=len, reverse=True)
+        for phrase in sorted_phrases:
+            if phrase in query:
+                synonyms = self.phrase_dict[phrase]
+                expanded.extend(synonyms)
+        
+        # 2. 提取中文词，检查单字同义词
         words = re.findall(r'[\u4e00-\u9fff]+', query)
         
         for word in words:
