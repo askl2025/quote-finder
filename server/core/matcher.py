@@ -155,14 +155,18 @@ class PoetryMatcher:
         if len(expanded_queries) <= 1:
             return 0.0
         
-        quote_keywords = self._extract_keywords(quote_text)
+        # 提取名句中的字符
+        quote_chars = set(re.findall(r'[\u4e00-\u9fff]', quote_text))
         
         # 计算扩展词在名句中的命中率
         hit_count = 0
         for eq in expanded_queries[1:]:  # 跳过原始查询
-            eq_keywords = self._extract_keywords(eq)
-            if eq_keywords & quote_keywords:
+            # 检查扩展词是否在名句中出现
+            if eq in quote_text:
                 hit_count += 1
+            # 检查扩展词的每个字符是否在名句中
+            elif any(char in quote_chars for char in eq):
+                hit_count += 0.5
         
         # 归一化
         max_hits = len(expanded_queries) - 1
